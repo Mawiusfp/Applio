@@ -1,10 +1,11 @@
+import os
 import numpy as np
 import torch
 import librosa
-import soundfile as sf
 from rvc.lib.predictors.f0 import RMVPE
-from transformers import HubertModel
+from rvc.lib.utils import load_embedding, EMBEDDER_PRESETS
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def cf0(f0):
     f0_bin = 256
@@ -22,10 +23,9 @@ def cf0(f0):
     return np.rint(f0_mel).astype(int)
 
 
-ref = r"reference.wav"
+ref = os.path.join(SCRIPT_DIR, "reference.wav")
 audio, sr = librosa.load(ref, sr=16000)
 trimmed_len = (len(audio) // 320) * 320
-# to prevent feature and pitch offset mismatch
 audio = audio[:trimmed_len]
 
 print("audio", audio.shape)
@@ -35,34 +35,25 @@ print("f0", f0.shape)
 f0c = cf0(f0)
 print("f0c", f0c.shape)
 
-cv_path = r"rvc\models\embedders\contentvec"
-cv_model = HubertModel.from_pretrained(cv_path)
-
-spin_path = r"rvc\models\embedders\spin"
-spin_model = HubertModel.from_pretrained(spin_path)
-
-spin2_path = r"rvc\models\embedders\spin-v2"
-spin2_model = HubertModel.from_pretrained(spin2_path)
-
 feats = torch.from_numpy(audio).to(torch.float32).to("cpu")
 feats = torch.nn.functional.pad(feats.unsqueeze(0), (40, 40), mode="reflect")
 feats = feats.view(1, -1)
 
-with torch.no_grad():
-    cv_feats = cv_model(feats)["last_hidden_state"]
-    cv_feats = cv_feats.squeeze(0).float().cpu().numpy()
-    print("cv", cv_feats.shape)
+for name in EMBEDDER_PRESETS:
+    out_dir = os.path.join(SCRIPT_DIR, name.replace("/", "_"))
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, "feats.npy")
+    print(f"Generating reference for {name} -> {out_path}")
+    model = load_embedding(name)
+    with torch.no_grad():
+        feats_out = model(feats)
+        if hasattr(feats_out, "last_hidden_state"):
+            feats_out = feats_out["last_hidden_state"]
+        elif isinstance(feats_out, tuple):
+            feats_out = feats_out[0]
+        feats_out = feats_out.squeeze(0).float().cpu().numpy()
+        print(f"  shape: {feats_out.shape}")
+    np.save(out_path, feats_out)
 
-    spin_feats = spin_model(feats)["last_hidden_state"]
-    spin_feats = spin_feats.squeeze(0).float().cpu().numpy()
-    print("spin", spin_feats.shape)
-
-    spin2_feats = spin2_model(feats)["last_hidden_state"]
-    spin2_feats = spin2_feats.squeeze(0).float().cpu().numpy()
-    print("spin-v2", spin2_feats.shape)
-
-np.save(r"logs\reference\contentvec\feats.npy", cv_feats)
-np.save(r"logs\reference\spin\feats.npy", spin_feats)
-np.save(r"logs\reference\spin-v2\feats.npy", spin2_feats)
-np.save(r"logs\reference\pitch_coarse.npy", f0c)
-np.save(r"logs\reference\pitch_fine.npy", f0)
+np.save(os.path.join(SCRIPT_DIR, "pitch_coarse.npy"), f0c)
+np.save(os.path.join(SCRIPT_DIR, "pitch_fine.npy"), f0)

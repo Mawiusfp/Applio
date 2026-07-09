@@ -20,7 +20,7 @@ set /a startMin=1%startMin% - 100
 set /a startSec=1%startSec% - 100
 set /a startTotal = startHour*3600 + startMin*60 + startSec
 
-call :cleanup
+@REM call :cleanup
 call :install_miniconda
 call :create_conda_env
 call :install_dependencies

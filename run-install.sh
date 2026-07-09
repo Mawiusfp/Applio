@@ -9,7 +9,7 @@ printf "\033]0;Installer\007"
 clear
 
 # Delete Windows bat files (.bat)
-find . -type f -iname "*.bat" -delete
+# find . -type f -iname "*.bat" -delete
 
 # Function to log messages with timestamps
 log_message() {
