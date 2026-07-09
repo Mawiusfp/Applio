@@ -23,7 +23,12 @@ from tqdm import tqdm
 now_dir = os.getcwd()
 sys.path.append(os.path.join(now_dir))
 
-from losses import discriminator_loss, feature_loss, generator_loss, kl_loss
+from rvc.train.losses import (
+    discriminator_loss,
+    feature_loss,
+    generator_loss,
+    kl_loss,
+)
 from mel_processing import (
     MultiScaleMelSpectrogramLoss,
     mel_spectrogram_torch,
