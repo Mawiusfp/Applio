@@ -778,6 +778,41 @@ def train_tab():
                 interactive=True,
             )
 
+
+        sender_checkbox = gr.Checkbox(
+            label=i18n("Send model every time its saved to ip:"),
+            info=i18n(
+                "Receiving ip should have the receiver script running and be reachable"
+            ),
+            value=False,
+            interactive=True,
+        )
+
+        with gr.Row(visible=False) as sender_row:
+            ip_sender = gr.Textbox(
+                label="",
+                value="",
+                max_lines=1,
+                interactive=True,
+            )
+            port_sender = gr.Textbox(
+                label="",
+                value="Port",
+                max_lines=1,
+                interactive=True,
+            )
+
+
+        def toggle_sender_fields(enabled):
+            return gr.update(visible=enabled)
+
+
+        sender_checkbox.change(
+            fn=toggle_sender_fields,
+            inputs=sender_checkbox,
+            outputs=sender_row,
+        )
+
         def enforce_terms(terms_accepted, *args):
             if not terms_accepted:
                 message = "You must agree to the Terms of Use to proceed."

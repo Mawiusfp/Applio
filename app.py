@@ -175,6 +175,26 @@ with gr.Blocks(
 
 
 def launch_gradio(server_name: str, server_port: int) -> None:
+
+    if os.name == 'nt':
+        os.system('')
+
+    msg = r"""
+                _______  _____   _____         _____  _____  
+                |_____| |_____] |_____] |        |   |     | 
+                |     | |       |       |_____ __|__ |_____| 
+
+        _______ ______  _    _ _______ __   _ _______ _______ ______ 
+        |_____| |     \  \  /  |_____| | \  | |       |______ |     \
+        |     | |_____/   \/   |     | |  \_| |_____  |______ |_____/
+
+            By IAHispano + Mawius:
+        https://github.com/Mawiusfp/Applio/tree/advanced-applio
+
+    """
+
+    print("\033[91m" + msg + "\033[0m")
+    
     app, _, _ = Applio.launch(
         favicon_path="assets/ICON.ico",
         share="--share" in sys.argv,
