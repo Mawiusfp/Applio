@@ -175,6 +175,16 @@ class Synthesizer(torch.nn.Module):
         y_lengths: Optional[torch.Tensor] = None,
         ds: Optional[torch.Tensor] = None,
     ):
+        
+        # print("ds =", ds)
+        # print("unique =", torch.unique(ds))
+        # print("num_embeddings =", self.emb_g.num_embeddings)
+
+        assert ds.min() >= 0
+        assert ds.max() < self.emb_g.num_embeddings, (
+            f"Speaker ID {ds.max().item()} >= {self.emb_g.num_embeddings}"
+        )
+
         g = self.emb_g(ds).unsqueeze(-1)
         m_p, logs_p, x_mask = self.enc_p(phone, pitch, phone_lengths)
 

@@ -1,5 +1,8 @@
 @echo off
 
+@REM set CUDA_LAUNCH_BLOCKING=1
+@REM set TORCH_USE_CUDA_DSA=1
+
 if /i "%cd%"=="C:\Windows\System32" (
     color 0C
     echo Applio does not require administrator permissions and should be run as a regular user.

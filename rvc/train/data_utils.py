@@ -87,25 +87,30 @@ class TextAudioLoaderMultiNSFsid(torch.utils.data.Dataset):
         return (spec, wav, phone, pitch, pitchf, dv)
 
     def get_labels(self, phone, pitch, pitchf):
-        """
-        Loads and processes phoneme, pitch, and pitchf labels.
+        phone_path = phone
+        pitch_path = pitch
+        pitchf_path = pitchf
 
-        Args:
-            phone (str): Path to phoneme label file.
-            pitch (str): Path to pitch label file.
-            pitchf (str): Path to pitchf label file.
-        """
-        phone = np.load(phone)
+        phone = np.load(phone_path)
         phone = np.repeat(phone, 2, axis=0)
-        pitch = np.load(pitch)
-        pitchf = np.load(pitchf)
+
+        pitch = np.load(pitch_path)
+        pitchf = np.load(pitchf_path)
+
         n_num = min(phone.shape[0], 900)
         phone = phone[:n_num, :]
         pitch = pitch[:n_num]
         pitchf = pitchf[:n_num]
+
+        if pitch.min() < 0 or pitch.max() > 255:
+            print(f"\nBad pitch file: {pitch_path}")
+            print(f"Min: {pitch.min()}  Max: {pitch.max()}")
+            raise RuntimeError("Invalid pitch indices")
+
         phone = torch.FloatTensor(phone)
         pitch = torch.LongTensor(pitch)
         pitchf = torch.FloatTensor(pitchf)
+
         return phone, pitch, pitchf
 
     def get_audio(self, filename):

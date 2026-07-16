@@ -543,6 +543,7 @@ def train_tab():
                     # "spin",
                     "spin-v2",
                     "hubert-xlarge-ll60k",
+                    "wavlm-large",
                     # "chinese-hubert-base",
                     # "japanese-hubert-base",
                     # "korean-hubert-base",
