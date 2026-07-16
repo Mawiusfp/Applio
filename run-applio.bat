@@ -19,6 +19,6 @@ if not exist env (
     exit /b 1
 )
 
-env\python.exe app.py --open
+env\python.exe app.py
 echo.
 pause

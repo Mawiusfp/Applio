@@ -112,6 +112,7 @@ def load_embedding(embedder_model, custom_embedder=None):
         "chinese-hubert-base": os.path.join(embedder_root, "chinese_hubert_base"),
         "japanese-hubert-base": os.path.join(embedder_root, "japanese_hubert_base"),
         "korean-hubert-base": os.path.join(embedder_root, "korean_hubert_base"),
+        "hubert-xlarge-ll60k": os.path.join(embedder_root, "hubert-xlarge-ll60k"),
     }
 
     online_embedders = {
@@ -121,6 +122,7 @@ def load_embedding(embedder_model, custom_embedder=None):
         "chinese-hubert-base": "https://huggingface.co/IAHispano/Applio/resolve/main/Resources/embedders/chinese_hubert_base/pytorch_model.bin",
         "japanese-hubert-base": "https://huggingface.co/IAHispano/Applio/resolve/main/Resources/embedders/japanese_hubert_base/pytorch_model.bin",
         "korean-hubert-base": "https://huggingface.co/IAHispano/Applio/resolve/main/Resources/embedders/korean_hubert_base/pytorch_model.bin",
+        "hubert-xlarge-ll60k": "https://huggingface.co/facebook/hubert-xlarge-ll60k/resolve/main/pytorch_model.bin",
     }
 
     config_files = {
@@ -130,6 +132,7 @@ def load_embedding(embedder_model, custom_embedder=None):
         "chinese-hubert-base": "https://huggingface.co/IAHispano/Applio/resolve/main/Resources/embedders/chinese_hubert_base/config.json",
         "japanese-hubert-base": "https://huggingface.co/IAHispano/Applio/resolve/main/Resources/embedders/japanese_hubert_base/config.json",
         "korean-hubert-base": "https://huggingface.co/IAHispano/Applio/resolve/main/Resources/embedders/korean_hubert_base/config.json",
+        "hubert-xlarge-ll60k": "https://huggingface.co/facebook/hubert-xlarge-ll60k/resolve/main/config.json",
     }
 
     if embedder_model == "custom":

@@ -466,7 +466,7 @@ class VoiceConverter:
             self.use_f0 = self.cpt.get("f0", 1)
 
             self.version = self.cpt.get("version", "v1")
-            self.text_enc_hidden_dim = 768 if self.version == "v2" else 256
+            self.text_enc_hidden_dim = self.cpt["weight"]["enc_p.emb_phone.weight"].shape[1]
             self.vocoder = self.cpt.get("vocoder", "HiFi-GAN")
             self.net_g = Synthesizer(
                 *self.cpt["config"],

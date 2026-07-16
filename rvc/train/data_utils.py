@@ -198,9 +198,19 @@ class TextAudioCollateMultiNSFsid:
 
         max_phone_len = max([x[2].size(0) for x in batch])
         phone_lengths = torch.LongTensor(len(batch))
+
+        # debug
+        # print("batch0 shape:", batch[0][2].shape)
+        # print("batch1 shape:", batch[1][2].shape if len(batch) > 1 else None)
+
         phone_padded = torch.FloatTensor(
-            len(batch), max_phone_len, batch[0][2].shape[1]
+            len(batch),
+            max_phone_len,
+            batch[0][2].shape[1],
         )
+
+        print("allocated:", phone_padded.shape)
+
         pitch_padded = torch.LongTensor(len(batch), max_phone_len)
         pitchf_padded = torch.FloatTensor(len(batch), max_phone_len)
         phone_padded.zero_()

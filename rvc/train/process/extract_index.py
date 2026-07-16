@@ -61,8 +61,11 @@ else:
 
     n_ivf = min(int(16 * np.sqrt(big_npy.shape[0])), big_npy.shape[0] // 39)
 
+    # debug
+    print("FAISS features:", big_npy.shape)
+
     # index_added
-    index_added = faiss.index_factory(768, f"IVF{n_ivf},Flat")
+    index_added = faiss.index_factory(big_npy.shape[1], f"IVF{n_ivf},Flat")
     index_ivf_added = faiss.extract_index_ivf(index_added)
     index_ivf_added.nprobe = 1
     index_added.train(big_npy)

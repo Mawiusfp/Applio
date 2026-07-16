@@ -1122,6 +1122,7 @@ def inference_tab():
                     label=i18n("Embedder Model"),
                     info=i18n("Model used for learning speaker embedding."),
                     choices=[
+                        "hubert-xlarge-ll60k",
                         "contentvec",
                         "spin",
                         "spin-v2",

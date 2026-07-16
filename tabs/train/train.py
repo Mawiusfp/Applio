@@ -542,6 +542,7 @@ def train_tab():
                     "contentvec",
                     # "spin",
                     "spin-v2",
+                    "hubert-xlarge-ll60k",
                     # "chinese-hubert-base",
                     # "japanese-hubert-base",
                     # "korean-hubert-base",

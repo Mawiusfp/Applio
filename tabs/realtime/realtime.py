@@ -1547,6 +1547,7 @@ def realtime_tab():
                     )
                     embedder_model = gr.Radio(
                         choices=[
+                            "hubert-xlarge-ll60k",
                             "contentvec",
                             "spin",
                             "spin-v2",
