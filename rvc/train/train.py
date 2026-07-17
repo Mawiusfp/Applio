@@ -10,6 +10,8 @@ from distutils.util import strtobool
 from random import randint, shuffle
 from time import time as ttime
 
+import threading
+import requests
 import numpy as np
 import torch
 import torch.distributed as dist
@@ -44,6 +46,13 @@ import rvc.lib.zluda
 from rvc.lib.algorithm import commons
 from rvc.train.process.extract_model import extract_model
 
+# print(f"\n ===== ARGRUMENTS ===== ")
+
+# for i, arg in enumerate(sys.argv):
+#     print(f"argv[{i}] = {arg}")
+
+# print(f"\n======================")
+
 # Parse command line arguments
 model_name = sys.argv[1]
 save_every_epoch = int(sys.argv[2])
@@ -61,6 +70,30 @@ overtraining_threshold = int(sys.argv[13])
 cleanup = strtobool(sys.argv[14])
 vocoder = sys.argv[15]
 checkpointing = strtobool(sys.argv[16])
+
+# remote model saver
+send_model = strtobool(sys.argv[17])
+sender_ipaddr = sys.argv[18]
+sender_keep_n_models = int(sys.argv[19])
+secret_code = sys.argv[20]
+
+from urllib.parse import urlsplit
+
+parts = urlsplit(sender_ipaddr)
+base = f"{parts.scheme}://{parts.netloc}"
+
+if send_model:
+    try:
+        r = requests.get(f"{base}/ping", timeout=10)
+        r.raise_for_status()
+        print(f"Ping to {base} successful.")
+    except requests.exceptions.RequestException as e:
+        print(f"Warning: could not reach {base} ({e}). Remote model upload disabled.")
+        send_model = False
+
+
+
+
 # experimental settings
 randomized = True
 d_lr_coeff = 1.0
@@ -301,6 +334,51 @@ def main():
 
     continue_overtrain_detector(training_file_path)
     start()
+
+def prune_old_checkpoints(experiment_dir, keep_n):
+    """Keep only the newest `keep_n` G_*.pth and D_*.pth checkpoints (by trailing step number)."""
+    for prefix in ("G_", "D_"):
+        files = [
+            f for f in os.listdir(experiment_dir)
+            if f.startswith(prefix) and f.endswith(".pth")
+        ]
+        files.sort(
+            key=lambda x: int(x.split("_")[-1].split(".")[0])
+            if x.split("_")[-1].split(".")[0].isdigit() else 0,
+            reverse=True,
+        )
+        for old_file in files[keep_n:]:
+            try:
+                os.remove(os.path.join(experiment_dir, old_file))
+            except OSError as e:
+                print(f"Warning: could not remove old checkpoint {old_file}: {e}")
+
+
+def post_model(ip, file_paths, secret_code):
+
+    def _upload():
+        for file_path in file_paths:
+            filename = os.path.basename(file_path)
+            try:
+                with open(file_path, "rb") as f:
+                    r = requests.post(
+                        ip,
+                        headers={
+                            "X-API-Key": secret_code,
+                        },
+                        files={
+                            "file": (filename, f),
+                        },
+                        timeout=60,
+                    )
+                r.raise_for_status()
+                print(f"Uploaded {filename}")
+            except requests.exceptions.RequestException as e:
+                print(f"Warning: failed to upload {filename}: {e}")
+
+    thread = threading.Thread(target=_upload, daemon=True)
+    thread.start()
+    return thread
 
 
 def run(
@@ -1031,6 +1109,8 @@ def train_and_evaluate(
                 os.path.join(experiment_dir, "D_" + checkpoint_suffix),
                 scaler,
             )
+            if not save_only_latest:
+                prune_old_checkpoints(experiment_dir, sender_keep_n_models)
             if custom_save_every_weights:
                 model_add.append(
                     os.path.join(
@@ -1079,6 +1159,24 @@ def train_and_evaluate(
                         overtrain_info=overtrain_info,
                         vocoder=vocoder,
                     )
+
+        if send_model:
+            # Filter and collect models
+            g_models = sorted(
+                [f for f in os.listdir(experiment_dir) if f.startswith("G_")],
+                key=lambda x: int(x.split("_")[-1].split(".")[0]) if x.split("_")[-1].split(".")[0].isdigit() else 0,
+                reverse=True
+            )
+            d_models = sorted(
+                [f for f in os.listdir(experiment_dir) if f.startswith("D_")],
+                key=lambda x: int(x.split("_")[-1].split(".")[0]) if x.split("_")[-1].split(".")[0].isdigit() else 0,
+                reverse=True
+            )
+            
+            # Keep only top sender_keep_n_models
+            models_to_send = [os.path.join(experiment_dir, m) for m in (g_models[:sender_keep_n_models] + d_models[:sender_keep_n_models])]
+            
+            post_model(ip=f"{base}/upload-model", file_paths=models_to_send, secret_code=secret_code)
 
         if done:
             # Clean-up process IDs from config.json

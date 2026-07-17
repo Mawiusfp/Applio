@@ -9,6 +9,8 @@ class RichPresenceManager:
         self.running = False
 
     def start_presence(self):
+        print(f"No Discorddo")
+        """
         if not self.running:
             self.running = True
             self.rpc = Presence(self.client_id)
@@ -23,8 +25,11 @@ class RichPresenceManager:
                 print(f"An error occurred connecting to Discord: {error}")
                 self.rpc = None
                 self.running = False
+        """
 
     def update_presence(self):
+        print(f"No Discorddo")
+        """
         if self.rpc:
             self.rpc.update(
                 state="applio.org",
@@ -37,12 +42,16 @@ class RichPresenceManager:
                 large_text="Experimenting with applio",
                 start=dt.datetime.now().timestamp(),
             )
+        """
 
     def stop_presence(self):
+        print(f"No Discorddo")
+        """
         self.running = False
         if self.rpc:
             self.rpc.close()
             self.rpc = None
+        """
 
 
 RPCManager = RichPresenceManager()

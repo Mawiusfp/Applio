@@ -15,6 +15,7 @@
 *.png
 *.safetensors
 
+
 assets/audios
 assets/datasets
 logs
@@ -22,3 +23,5 @@ rvc/models
 env
 venv
 .venv
+received
+uploads.csv
