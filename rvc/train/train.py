@@ -460,7 +460,9 @@ def run(
 
     print(f"[KAGGLE_DEBUG] rank={rank} creating dataset", flush=True)
     train_dataset = TextAudioLoaderMultiNSFsid(config.data)
+    print(f"[KAGGLE_DEBUG] rank={rank} dataset created, {len(train_dataset)} samples", flush=True)
     collate_fn = TextAudioCollateMultiNSFsid()
+    print(f"[KAGGLE_DEBUG] rank={rank} creating sampler", flush=True)
     train_sampler = DistributedBucketSampler(
         train_dataset,
         batch_size,
@@ -469,6 +471,7 @@ def run(
         rank=rank,
         shuffle=True,
     )
+    print(f"[KAGGLE_DEBUG] rank={rank} creating dataloader", flush=True)
 
     train_loader = DataLoader(
         train_dataset,
