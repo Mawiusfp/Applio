@@ -82,6 +82,10 @@ from urllib.parse import urlsplit
 parts = urlsplit(sender_ipaddr)
 base = f"{parts.scheme}://{parts.netloc}"
 
+if send_model and not (parts.scheme and parts.netloc):
+    print(f"Warning: sender_ipaddr '{sender_ipaddr}' is empty or invalid. Remote model upload disabled.")
+    send_model = False
+
 if send_model:
     try:
         r = requests.get(f"{base}/ping", timeout=10)
@@ -417,8 +421,12 @@ def run(
     else:
         writer_eval = None
 
+    if device.type == "cuda":
+        os.environ.setdefault("NCCL_P2P_DISABLE", "1")
+        os.environ.setdefault("NCCL_IB_DISABLE", "1")
+
     dist.init_process_group(
-        backend="gloo" if sys.platform == "win32" or device.type != "cuda" else "nccl",
+        backend="gloo" if sys.platform == "win32" or device.type != "cuda" or n_gpus == 1 else "nccl",
         init_method="env://",
         world_size=n_gpus if device.type == "cuda" else 1,
         rank=rank if device.type == "cuda" else 0,
