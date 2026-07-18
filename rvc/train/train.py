@@ -85,7 +85,6 @@ parts = urlsplit(sender_ipaddr)
 base = f"{parts.scheme}://{parts.netloc}"
 
 if send_model and not (parts.scheme and parts.netloc):
-    print(f"Warning: sender_ipaddr '{sender_ipaddr}' is empty or invalid. Remote model upload disabled.")
     send_model = False
 
 if send_model:
