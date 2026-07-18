@@ -77,6 +77,8 @@ sender_ipaddr = sys.argv[18]
 sender_keep_n_models = int(sys.argv[19])
 secret_code = sys.argv[20]
 
+print(f"Running train script")
+
 from urllib.parse import urlsplit
 
 parts = urlsplit(sender_ipaddr)
