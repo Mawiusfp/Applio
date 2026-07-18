@@ -206,17 +206,17 @@ def main():
     """
     Main function to start the training process.
     """
-    print("[DEBUG] main() called")
+    print("[KAGGLE_DEBUG] main() called", flush=True)
     global training_file_path, last_loss_gen_all, smoothed_loss_gen_history, loss_gen_history, loss_disc_history, smoothed_loss_disc_history, overtrain_save_epoch, gpus
 
     os.environ["MASTER_ADDR"] = "localhost"
     os.environ["MASTER_PORT"] = str(randint(20000, 55555))
-    print("[DEBUG] MASTER_ADDR/PORT set")
+    print("[KAGGLE_DEBUG] MASTER set", flush=True)
     # Check sample rate
     wavs = glob.glob(
         os.path.join(os.path.join(experiment_dir, "sliced_audios"), "*.wav")
     )
-    print(f"[DEBUG] Found {len(wavs)} wav files")
+    print(f"[KAGGLE_DEBUG] Found {len(wavs)} wavs", flush=True)
     if wavs:
         _, sr = load_wav_to_torch(wavs[0])
         if sr != config.data.sample_rate:
@@ -231,23 +231,23 @@ def main():
         device = torch.device("cuda")
         gpus = [int(item) for item in gpus.split("-")]
         n_gpus = len(gpus)
-        print(f"[DEBUG] Using CUDA with {n_gpus} GPUs: {gpus}")
+        print(f"[KAGGLE_DEBUG] CUDA {n_gpus} GPUs: {gpus}", flush=True)
     elif torch.backends.mps.is_available():
         device = torch.device("mps")
         gpus = [0]
         n_gpus = 1
-        print("[DEBUG] Using MPS")
+        print("[KAGGLE_DEBUG] MPS", flush=True)
     else:
         device = torch.device("cpu")
         gpus = [0]
         n_gpus = 1
-        print("Training with CPU, this will take a long time.")
+        print("[KAGGLE_DEBUG] CPU only", flush=True)
 
     def start():
         """
         Starts the training process with multi-GPU support or CPU.
         """
-        print(f"[DEBUG] start() called, spawning {len(gpus)} processes")
+        print(f"[KAGGLE_DEBUG] Spawning {len(gpus)} processes", flush=True)
         children = []
         pid_data = {"process_pids": []}
         with open(config_save_path, "r", encoding="utf-8") as pid_file:
@@ -258,7 +258,7 @@ def main():
                 pass
         with open(config_save_path, "w") as pid_file:
             for rank, device_id in enumerate(gpus):
-                print(f"[DEBUG] Spawning process rank={rank}, device_id={device_id}")
+                print(f"[KAGGLE_DEBUG] Starting proc rank={rank}", flush=True)
                 subproc = mp.Process(
                     target=run,
                     args=(
@@ -276,11 +276,9 @@ def main():
                 )
                 children.append(subproc)
                 subproc.start()
-                print(f"[DEBUG] Process {rank} started with PID {subproc.pid}")
                 pid_data["process_pids"].append(subproc.pid)
             json.dump(pid_data, pid_file, indent=4)
 
-        print(f"[DEBUG] Waiting for {len(children)} child processes to complete")
         for i in range(n_gpus):
             children[i].join()
 
@@ -421,7 +419,7 @@ def run(
         config (object): Configuration object containing training parameters.
         device (torch.device): The device to use for training (CPU or GPU).
     """
-    print(f"[DEBUG] run() started for rank={rank}, device={device}, device_id={device_id}")
+    print(f"[KAGGLE_DEBUG] run() rank={rank}", flush=True)
     global global_step, smoothed_value_gen, smoothed_value_disc
 
     smoothed_value_gen = 0
@@ -435,15 +433,17 @@ def run(
     if device.type == "cuda":
         os.environ.setdefault("NCCL_P2P_DISABLE", "1")
         os.environ.setdefault("NCCL_IB_DISABLE", "1")
+        print(f"[KAGGLE_DEBUG] rank={rank} NCCL env set", flush=True)
 
-    print(f"[DEBUG] rank={rank} calling dist.init_process_group")
+    print(f"[KAGGLE_DEBUG] rank={rank} dist.init...", flush=True)
+
     dist.init_process_group(
         backend="gloo" if sys.platform == "win32" or device.type != "cuda" or n_gpus == 1 else "nccl",
         init_method="env://",
         world_size=n_gpus if device.type == "cuda" else 1,
         rank=rank if device.type == "cuda" else 0,
     )
-    print(f"[DEBUG] rank={rank} dist.init_process_group completed")
+    print(f"[KAGGLE_DEBUG] rank={rank} dist.init done", flush=True)
 
     torch.manual_seed(config.train.seed)
 
@@ -451,14 +451,14 @@ def run(
         torch.cuda.set_device(device_id)
 
     # Create datasets and dataloaders
-    print(f"[DEBUG] rank={rank} importing data_utils")
+    print(f"[KAGGLE_DEBUG] rank={rank} loading data_utils", flush=True)
     from data_utils import (
         DistributedBucketSampler,
         TextAudioCollateMultiNSFsid,
         TextAudioLoaderMultiNSFsid,
     )
-    print(f"[DEBUG] rank={rank} data_utils imported")
 
+    print(f"[KAGGLE_DEBUG] rank={rank} creating dataset", flush=True)
     train_dataset = TextAudioLoaderMultiNSFsid(config.data)
     collate_fn = TextAudioCollateMultiNSFsid()
     train_sampler = DistributedBucketSampler(
