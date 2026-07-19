@@ -213,9 +213,8 @@ def main():
     os.environ["MASTER_PORT"] = str(randint(20000, 55555))
     print("[KAGGLE_DEBUG] MASTER set", flush=True)
     # Check sample rate
-    wavs = glob.glob(
-        os.path.join(os.path.join(experiment_dir, "sliced_audios"), "*.wav")
-    )
+    wavs = glob.glob(os.path.join(experiment_dir, "sliced_audios", "*.wav")) + \
+        glob.glob(os.path.join(experiment_dir, "sliced_audios", "*.flac"))
     print(f"[KAGGLE_DEBUG] Found {len(wavs)} wavs", flush=True)
     if wavs:
         _, sr = load_wav_to_torch(wavs[0])
@@ -477,11 +476,11 @@ def run(
         train_dataset,
         num_workers=4,
         shuffle=False,
-        pin_memory=True,
+        pin_memory=False,
         collate_fn=collate_fn,
         batch_sampler=train_sampler,
         persistent_workers=True,
-        prefetch_factor=8,
+        prefetch_factor=None,
     )
 
     # Validations
@@ -689,6 +688,17 @@ def run(
             pitchf.to(device),
             sid.to(device),
         )
+
+    # else:
+    #     print("No custom reference found, using a default audio sample for validation")
+    #     try:
+    #         info = next(iter(train_loader))
+    #     except Exception as e:
+    #         import traceback
+    #         print("CRASH ON FIRST BATCH:")
+    #         traceback.print_exc()
+    #         os._exit(1)
+    #     phone, phone_lengths, pitch, pitchf, _, _, _, _, sid = info
 
     for epoch in range(epoch_str, total_epoch + 1):
         train_and_evaluate(

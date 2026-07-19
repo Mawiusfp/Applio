@@ -127,7 +127,7 @@ class TextAudioLoaderMultiNSFsid(torch.utils.data.Dataset):
             )
         audio_norm = audio
         audio_norm = audio_norm.unsqueeze(0)
-        spec_filename = filename.replace(".wav", ".spec.pt")
+        spec_filename = filename.rsplit(".", 1)[0] + ".spec.pt"
         if os.path.exists(spec_filename):
             try:
                 spec = torch.load(spec_filename, weights_only=True)
