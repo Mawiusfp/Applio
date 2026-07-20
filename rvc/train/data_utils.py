@@ -6,6 +6,8 @@ import torch.utils.data
 from mel_processing import spectrogram_torch
 from utils import load_filepaths_and_text, load_wav_to_torch
 
+import requests
+
 
 class TextAudioLoaderMultiNSFsid(torch.utils.data.Dataset):
     """
@@ -86,13 +88,19 @@ class TextAudioLoaderMultiNSFsid(torch.utils.data.Dataset):
 
         return (spec, wav, phone, pitch, pitchf, dv)
 
-    def get_labels(self, phone, pitch, pitchf):
+    def get_labels(self, phone, pitch, pitchf, stream_data=None, endpoint=None):
         phone_path = phone
         pitch_path = pitch
         pitchf_path = pitchf
 
-        phone = np.load(phone_path)
-        phone = np.repeat(phone, 2, axis=0)
+        if stream_data and endpoint:
+            import io
+            response = requests.get(f"{endpoint}{phone_path}", timeout=30)
+            response.raise_for_status()
+            phone = np.load(io.BytesIO(response.content))
+        else:
+            phone = np.load(phone_path)
+            phone = np.repeat(phone, 2, axis=0)
 
         pitch = np.load(pitch_path)
         pitchf = np.load(pitchf_path)
