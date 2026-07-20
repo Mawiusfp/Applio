@@ -23,6 +23,10 @@ sender_ipaddr = "localhost:8000"
 sender_keep_n_models = 5
 secret_code = "jg9438ghjhj9438jJs8ufh0NFYa7s8fnYA08F7Y"
 
+# streaming data server (optional)
+stream_data =              False
+data_server_url =          "http://localhost:8000/"
+
 import sys
 import os
 
@@ -49,7 +53,9 @@ if os.name == "nt":
         f"{send_model} "
         f"{sender_ipaddr} "
         f"{sender_keep_n_models} "
-        f"{secret_code}"
+        f"{secret_code} "
+        f"{stream_data} "
+        f"{data_server_url}"
     )
 
 elif os.name == "posix":
@@ -76,7 +82,9 @@ elif os.name == "posix":
         f"{send_model} "
         f"{sender_ipaddr} "
         f"{sender_keep_n_models} "
-        f"{secret_code}"
+        f"{secret_code} "
+        f"{stream_data} "
+        f"{data_server_url}"
     )
 
 # 2859 2.15it/s

@@ -77,6 +77,10 @@ sender_ipaddr = sys.argv[18] if len(sys.argv) > 18 else ""
 sender_keep_n_models = int(sys.argv[19]) if len(sys.argv) > 19 else 2
 secret_code = sys.argv[20] if len(sys.argv) > 20 else ""
 
+# streaming data server (optional)
+stream_data = strtobool(sys.argv[21]) if len(sys.argv) > 21 else False
+data_server_url = sys.argv[22] if len(sys.argv) > 22 else ""
+
 print(f"Running train script #1")
 
 from urllib.parse import urlsplit
@@ -458,7 +462,7 @@ def run(
     )
 
     print(f"[KAGGLE_DEBUG] rank={rank} creating dataset", flush=True)
-    train_dataset = TextAudioLoaderMultiNSFsid(config.data)
+    train_dataset = TextAudioLoaderMultiNSFsid(config.data, stream_data=stream_data, endpoint=data_server_url)
     print(f"[KAGGLE_DEBUG] rank={rank} dataset created, {len(train_dataset)} samples", flush=True)
     collate_fn = TextAudioCollateMultiNSFsid()
     print(f"[KAGGLE_DEBUG] rank={rank} creating sampler", flush=True)

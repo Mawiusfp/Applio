@@ -17,7 +17,7 @@ class TextAudioLoaderMultiNSFsid(torch.utils.data.Dataset):
         hparams: Hyperparameters.
     """
 
-    def __init__(self, hparams):
+    def __init__(self, hparams, stream_data=False, endpoint=None):
         self.audiopaths_and_text = load_filepaths_and_text(hparams.training_files)
         self.max_wav_value = hparams.max_wav_value
         self.sample_rate = hparams.sample_rate
@@ -27,6 +27,8 @@ class TextAudioLoaderMultiNSFsid(torch.utils.data.Dataset):
         self.sample_rate = hparams.sample_rate
         self.min_text_len = getattr(hparams, "min_text_len", 1)
         self.max_text_len = getattr(hparams, "max_text_len", 5000)
+        self.stream_data = stream_data
+        self.endpoint = endpoint
         self._filter()
 
     def _filter(self):
@@ -69,7 +71,7 @@ class TextAudioLoaderMultiNSFsid(torch.utils.data.Dataset):
         pitchf = audiopath_and_text[3]
         dv = audiopath_and_text[4]
 
-        phone, pitch, pitchf = self.get_labels(phone, pitch, pitchf)
+        phone, pitch, pitchf = self.get_labels(phone, pitch, pitchf, self.stream_data, self.endpoint)
         spec, wav = self.get_audio(file)
         dv = self.get_sid(dv)
 
@@ -88,16 +90,18 @@ class TextAudioLoaderMultiNSFsid(torch.utils.data.Dataset):
 
         return (spec, wav, phone, pitch, pitchf, dv)
 
-    def get_labels(self, phone, pitch, pitchf, stream_data=None, endpoint=None):
+    def get_labels(self, phone, pitch, pitchf, stream_data=False, endpoint=None):
         phone_path = phone
         pitch_path = pitch
         pitchf_path = pitchf
 
         if stream_data and endpoint:
             import io
-            response = requests.get(f"{endpoint}{phone_path}", timeout=30)
+            phone_filename = os.path.basename(phone_path)
+            response = requests.get(f"{endpoint}{phone_filename}", timeout=30)
             response.raise_for_status()
             phone = np.load(io.BytesIO(response.content))
+            phone = np.repeat(phone, 2, axis=0)
         else:
             phone = np.load(phone_path)
             phone = np.repeat(phone, 2, axis=0)
