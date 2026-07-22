@@ -62,7 +62,6 @@ gpus = sys.argv[6]
 batch_size = int(sys.argv[7])
 sample_rate = int(sys.argv[8])
 
-f"asda{asdfasdf}"
 def _strtobool(val):
     return val.lower() in ("yes", "true", "t", "y", "1")
 
