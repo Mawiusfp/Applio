@@ -62,7 +62,7 @@ gpus = sys.argv[6]
 batch_size = int(sys.argv[7])
 sample_rate = int(sys.argv[8])
 
-
+f"asda{asdfasdf}"
 def _strtobool(val):
     return val.lower() in ("yes", "true", "t", "y", "1")
 
@@ -76,13 +76,13 @@ checkpointing = _strtobool(sys.argv[14])
 
 
 # remote model saver (optional)
-send_model = strtobool(sys.argv[17]) if len(sys.argv) > 17 else False
+send_model = _strtobool(sys.argv[17]) if len(sys.argv) > 17 else False
 sender_ipaddr = sys.argv[18] if len(sys.argv) > 18 else ""
 sender_keep_n_models = int(sys.argv[19]) if len(sys.argv) > 19 else 2
 secret_code = sys.argv[20] if len(sys.argv) > 20 else ""
 
 # streaming data server (optional)
-stream_data = strtobool(sys.argv[21]) if len(sys.argv) > 21 else False
+stream_data = _strtobool(sys.argv[21]) if len(sys.argv) > 21 else False
 data_server_url = sys.argv[22] if len(sys.argv) > 22 else ""
 
 print(f"Running train script #1")
