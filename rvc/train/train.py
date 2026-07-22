@@ -45,6 +45,10 @@ import rvc.lib.zluda
 from rvc.lib.algorithm import commons
 from rvc.train.process.extract_model import extract_model
 
+def _strtobool(val):
+    return val.lower() in ("yes", "true", "t", "y", "1")
+
+
 # print(f"\n ===== ARGRUMENTS ===== ")
 
 # for i, arg in enumerate(sys.argv):
@@ -62,17 +66,16 @@ gpus = sys.argv[6]
 batch_size = int(sys.argv[7])
 sample_rate = int(sys.argv[8])
 
-def _strtobool(val):
-    return val.lower() in ("yes", "true", "t", "y", "1")
-
-
 save_only_latest = _strtobool(sys.argv[9])
 save_every_weights = _strtobool(sys.argv[10])
 cache_data_in_gpu = _strtobool(sys.argv[11])
-cleanup = _strtobool(sys.argv[12])
-vocoder = sys.argv[13]
-checkpointing = _strtobool(sys.argv[14])
 
+overtraining_detector = _strtobool(sys.argv[12])
+overtraining_threshold = int(sys.argv[13])
+
+cleanup = _strtobool(sys.argv[14])
+vocoder = sys.argv[15]
+checkpointing = _strtobool(sys.argv[16])
 
 # remote model saver (optional)
 send_model = _strtobool(sys.argv[17]) if len(sys.argv) > 17 else False
@@ -83,6 +86,8 @@ secret_code = sys.argv[20] if len(sys.argv) > 20 else ""
 # streaming data server (optional)
 stream_data = _strtobool(sys.argv[21]) if len(sys.argv) > 21 else False
 data_server_url = sys.argv[22] if len(sys.argv) > 22 else ""
+
+
 
 print(f"Running train script #1")
 
