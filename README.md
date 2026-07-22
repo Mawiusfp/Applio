@@ -1,3 +1,6 @@
+
+ ## <p color=FF0000>This branch is my playground and is intended for advanced RVC models, _<u>unless you have the time, hardware and knowledge for experimental models</u>_,  you should stick to the regular official project which can give very good and stable models that simply just works with other rvc related apps (things can and will break)</p>
+
 <h1 align="center">
   <a href="https://applio.org" target="_blank"><img src="https://github.com/IAHispano/Applio/assets/133521603/78e975d8-b07f-47ba-ab23-5a31592f322a" alt="Applio"></a>
 </h1>
