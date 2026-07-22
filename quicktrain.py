@@ -1,6 +1,6 @@
 
 
-model_name =                "CPP-WlmL-ReGAN"
+model_name =                "xxx_modelname_xxx"
 save_every_epoch =          1
 total_epoch =               50
 pretrainG =                 None
@@ -17,7 +17,7 @@ cleanup =                   False
 vocoder =                   "RefineGAN"
 checkpointing =             True
 
-# remote model saver (optional)
+# remote model saver (optional) works sometimes, maybe
 send_model = False
 sender_ipaddr = "localhost:8000"
 sender_keep_n_models = 5
