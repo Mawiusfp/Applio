@@ -73,6 +73,39 @@ cache_data_in_gpu = _strtobool(sys.argv[11])
 cleanup = _strtobool(sys.argv[12])
 vocoder = sys.argv[13]
 checkpointing = _strtobool(sys.argv[14])
+
+
+# remote model saver (optional)
+send_model = strtobool(sys.argv[17]) if len(sys.argv) > 17 else False
+sender_ipaddr = sys.argv[18] if len(sys.argv) > 18 else ""
+sender_keep_n_models = int(sys.argv[19]) if len(sys.argv) > 19 else 2
+secret_code = sys.argv[20] if len(sys.argv) > 20 else ""
+
+# streaming data server (optional)
+stream_data = strtobool(sys.argv[21]) if len(sys.argv) > 21 else False
+data_server_url = sys.argv[22] if len(sys.argv) > 22 else ""
+
+print(f"Running train script #1")
+
+from urllib.parse import urlsplit
+
+parts = urlsplit(sender_ipaddr)
+base = f"{parts.scheme}://{parts.netloc}"
+
+if send_model and not (parts.scheme and parts.netloc):
+    send_model = False
+
+if send_model:
+    try:
+        r = requests.get(f"{base}/ping", timeout=10)
+        r.raise_for_status()
+        print(f"Ping to {base} successful.")
+    except requests.exceptions.RequestException as e:
+        print(f"Warning: could not reach {base} ({e}). Remote model upload disabled.")
+        send_model = False
+
+
+
 # experimental settings
 randomized = True
 d_lr_coeff = 1.0
