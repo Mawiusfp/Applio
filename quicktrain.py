@@ -1,15 +1,16 @@
 
 
-model_name =                "xxx_modelname_xxx"
+
+model_name =                "TWPretrain-ReGAN"
 save_every_epoch =          1
-total_epoch =               50
+total_epoch =               75
 pretrainG =                 None
 pretrainD =                 None
 gpus =                      "0"
-batch_size =                24
+batch_size =                40
 sample_rate =               32000
 save_only_latest =          False
-save_every_weights =        False
+save_every_weights =        True
 cache_data_in_gpu =         False
 overtraining_detector =     True
 overtraining_threshold =    25
@@ -20,7 +21,7 @@ checkpointing =             True
 # remote model saver (optional) works sometimes, maybe
 send_model = False
 sender_ipaddr = "localhost:8000"
-sender_keep_n_models = 5
+sender_keep_n_models = 9999
 secret_code = "jg9438ghjhj9438jJs8ufh0NFYa7s8fnYA08F7Y"
 
 # streaming data server (optional)
@@ -87,4 +88,4 @@ elif os.name == "posix":
         f"{data_server_url}"
     )
 
-# 2859 2.15it/s
+input("\n\n> Press Enter to continue")

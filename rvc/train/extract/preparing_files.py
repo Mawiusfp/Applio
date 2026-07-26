@@ -1,6 +1,7 @@
 import os
 import shutil
 from random import shuffle
+import numpy as np
 from rvc.configs.config import Config
 import json
 
@@ -76,11 +77,21 @@ def generate_filelist(model_path: str, sample_rate: int, include_mutes: int = 2)
             os.path.join(mute_base_path, "f0_voiced", "mute.wav.npy")
         )
 
-        # adding x files per sid
-        for sid in sids * include_mutes:
-            options.append(
-                f"{mute_audio_path}|{mute_feature_path}|{mute_f0_path}|{mute_f0nsf_path}|{sid}"
-            )
+        use_mutes = True
+        if os.path.exists(mute_feature_path) and names:
+            sample_feat = os.path.join(feature_dir, next(iter(names)) + ".npy")
+            if os.path.exists(sample_feat):
+                mute_dim = np.load(mute_feature_path, allow_pickle=False).shape[-1]
+                data_dim = np.load(sample_feat, allow_pickle=False).shape[-1]
+                if mute_dim != data_dim:
+                    print(f"Warning: Mute features ({mute_dim}d) don't match data features ({data_dim}d). Skipping mutes.")
+                    use_mutes = False
+
+        if use_mutes:
+            for sid in sids * include_mutes:
+                options.append(
+                    f"{mute_audio_path}|{mute_feature_path}|{mute_f0_path}|{mute_f0nsf_path}|{sid}"
+                )
 
     file_path = os.path.join(model_path, "model_info.json")
     if os.path.exists(file_path):
@@ -90,7 +101,7 @@ def generate_filelist(model_path: str, sample_rate: int, include_mutes: int = 2)
         data = {}
     data.update(
         {
-            "speakers_id": len(sids),
+            "speakers_id": max(int(s) for s in sids) + 1,
         }
     )
     with open(file_path, "w") as f:

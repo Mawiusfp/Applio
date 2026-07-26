@@ -473,15 +473,30 @@ def run(
     except Exception as e:
         print(f"Could not load model info file: {e}. Using defaults.")
 
-    # Try to load speaker dim from latest checkpoint or pretrainG
+    # Verify spk_dim against actual filelist (model_info may undercount)
+    try:
+        filelist_path = os.path.join(experiment_dir, "filelist.txt")
+        max_sid = -1
+        with open(filelist_path, "r", encoding="utf-8") as f:
+            for line in f:
+                parts = line.strip().split("|")
+                if len(parts) >= 5:
+                    sid = int(parts[4])
+                    if sid > max_sid:
+                        max_sid = sid
+        if max_sid >= 0:
+            actual_spk_dim = max_sid + 1
+            if actual_spk_dim > spk_dim:
+                print(f"Filelist has speaker ID {max_sid}, adjusting spk_dim from {spk_dim} to {actual_spk_dim}")
+                spk_dim = actual_spk_dim
+    except Exception as e:
+        print(f"Could not verify speaker count from filelist: {e}")
+
+    # Try to load speaker dim from latest local checkpoint (resume only, not pretrain)
     try:
         last_g = latest_checkpoint_path(experiment_dir, "G_*.pth")
-        chk_path = (
-            last_g if last_g else (pretrainG if pretrainG not in ("", "None") else None)
-        )
-
-        if chk_path:
-            ckpt = torch.load(chk_path, map_location="cpu", weights_only=True)
+        if last_g:
+            ckpt = torch.load(last_g, map_location="cpu", weights_only=True)
             spk_dim = ckpt["model"]["emb_g.weight"].shape[0]
             del ckpt
     except Exception as e:
@@ -581,6 +596,11 @@ def run(
                 ckpt = torch.load(pretrainG, map_location="cpu", weights_only=True)[
                     "model"
                 ]
+                pretrained_emb = ckpt.get("emb_g.weight")
+                if pretrained_emb is not None and pretrained_emb.shape[0] < net_g.emb_g.num_embeddings:
+                    new_emb = net_g.emb_g.weight.data
+                    new_emb[:pretrained_emb.shape[0]] = pretrained_emb
+                    ckpt["emb_g.weight"] = new_emb
                 if hasattr(net_g, "module"):
                     net_g.module.load_state_dict(ckpt)
                 else:
@@ -853,7 +873,7 @@ def train_and_evaluate(
             if loss_gen_all < lowest_value["value"]:
                 lowest_value = {
                     "step": global_step,
-                    "value": loss_gen_all,
+                    "value": loss_gen_all.item(),
                     "epoch": epoch,
                 }
             optim_g.zero_grad()
@@ -1004,7 +1024,7 @@ def train_and_evaluate(
 
     if rank == 0:
         # Print training progress
-        lowest_value_rounded = round(lowest_value["value"].detach().item(), 3)
+        lowest_value_rounded = round(lowest_value["value"], 3)
 
         record = f"{model_name} | epoch={epoch} | step={global_step} | {epoch_recorder.record()}"
         if epoch > 1:
@@ -1044,7 +1064,7 @@ def train_and_evaluate(
 
         # Check completion
         if epoch >= custom_total_epoch:
-            lowest_value_rounded = round(lowest_value["value"].detach().item(), 3)
+            lowest_value_rounded = round(lowest_value["value"], 3)
             print(
                 f"Training has been successfully completed with {epoch} epoch, {global_step} steps and {round(loss_gen_all.item(), 3)} loss gen."
             )
