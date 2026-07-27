@@ -559,6 +559,8 @@ def run_train_script(
     d_pretrained_path: str = None,
     vocoder: str = "HiFi-GAN",
     checkpointing: bool = False,
+    overtraining_detector: bool = False,
+    overtraining_threshold: int = 25,
     shutdown_check: bool = False,
 ):
     if pretrained == True:
@@ -579,25 +581,22 @@ def run_train_script(
     command = [
         python,
         train_script_path,
-        *map(
-            str,
-            [
-                model_name,
-                save_every_epoch,
-                total_epoch,
-                pg,
-                pd,
-                gpu,
-                batch_size,
-                sample_rate,
-                save_only_latest,
-                save_every_weights,
-                cache_data_in_gpu,
-                cleanup,
-                vocoder,
-                checkpointing,
-            ],
-        ),
+        "--model_name", str(model_name),
+        "--save_every_epoch", str(save_every_epoch),
+        "--total_epoch", str(total_epoch),
+        "--pretrainG", str(pg),
+        "--pretrainD", str(pd),
+        "--gpus", str(gpu),
+        "--batch_size", str(batch_size),
+        "--sample_rate", str(sample_rate),
+        "--save_only_latest", str(save_only_latest),
+        "--save_every_weights", str(save_every_weights),
+        "--cache_data_in_gpu", str(cache_data_in_gpu),
+        "--overtraining_detector", str(overtraining_detector),
+        "--overtraining_threshold", str(overtraining_threshold),
+        "--cleanup", str(cleanup),
+        "--vocoder", str(vocoder),
+        "--checkpointing", str(checkpointing),
     ]
     result = subprocess.run(command)
     if result.returncode != 0:
@@ -2131,6 +2130,19 @@ def parse_arguments():
         default="Auto",
         required=False,
     )
+    train_parser.add_argument(
+        "--overtraining_detector",
+        type=lambda x: bool(strtobool(x)),
+        choices=[True, False],
+        help="Enable overtraining detection.",
+        default=False,
+    )
+    train_parser.add_argument(
+        "--overtraining_threshold",
+        type=int,
+        help="Threshold for overtraining detection.",
+        default=25,
+    )
 
     # Parser for 'index' mode
     index_parser = subparsers.add_parser(
@@ -2435,6 +2447,8 @@ def main():
                 d_pretrained_path=args.d_pretrained_path,
                 vocoder=args.vocoder,
                 checkpointing=args.checkpointing,
+                overtraining_detector=args.overtraining_detector,
+                overtraining_threshold=args.overtraining_threshold,
             )
         elif args.mode == "index":
             run_index_script(

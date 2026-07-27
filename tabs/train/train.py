@@ -697,6 +697,14 @@ def train_tab():
                         value=auto_enable_checkpointing(),
                         interactive=True,
                     )
+                    overtraining_detector = gr.Checkbox(
+                        label=i18n("Overtraining Detector"),
+                        info=i18n(
+                            "Detect overtraining to prevent the model from learning the training data too well and losing the ability to generalize to new data."
+                        ),
+                        value=False,
+                        interactive=True,
+                    )
                     shutdown_check = gr.Checkbox(
                         label=i18n("Shutdown after finishing"),
                         info=i18n(
@@ -742,6 +750,20 @@ def train_tab():
                             choices=sorted(pretraineds_list_d),
                             interactive=True,
                             allow_custom_value=True,
+                        )
+
+                with gr.Column(visible=False) as overtraining_settings:
+                    with gr.Accordion(i18n("Overtraining Detector Settings")):
+                        overtraining_threshold = gr.Slider(
+                            1,
+                            100,
+                            50,
+                            step=1,
+                            label=i18n("Overtraining Threshold"),
+                            info=i18n(
+                                "Set the maximum number of epochs you want your model to stop training if no improvement is detected."
+                            ),
+                            interactive=True,
                         )
 
             index_algorithm = gr.Radio(
@@ -970,6 +992,11 @@ def train_tab():
                 inputs=[custom_pretrained],
                 outputs=[pretrained_custom_settings],
             )
+            overtraining_detector.change(
+                fn=toggle_visible,
+                inputs=[overtraining_detector],
+                outputs=[overtraining_settings],
+            )
             refresh_custom_pretaineds_button.click(
                 fn=refresh_custom_pretraineds,
                 inputs=[],
@@ -1005,6 +1032,8 @@ def train_tab():
                     d_pretrained_path,
                     vocoder,
                     checkpointing,
+                    overtraining_detector,
+                    overtraining_threshold,
                     shutdown_check,
                 ],
                 outputs=[train_output_info],

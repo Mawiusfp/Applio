@@ -45,47 +45,60 @@ import rvc.lib.zluda
 from rvc.lib.algorithm import commons
 from rvc.train.process.extract_model import extract_model
 
+import argparse
+
 def _strtobool(val):
     return val.lower() in ("yes", "true", "t", "y", "1")
 
 
-# print(f"\n ===== ARGRUMENTS ===== ")
+parser = argparse.ArgumentParser()
+parser.add_argument("--model_name", type=str, required=True)
+parser.add_argument("--save_every_epoch", type=int, required=True)
+parser.add_argument("--total_epoch", type=int, required=True)
+parser.add_argument("--pretrainG", type=str, default="")
+parser.add_argument("--pretrainD", type=str, default="")
+parser.add_argument("--gpus", type=str, default="0")
+parser.add_argument("--batch_size", type=int, default=8)
+parser.add_argument("--sample_rate", type=int, required=True)
+parser.add_argument("--save_only_latest", type=_strtobool, default="True")
+parser.add_argument("--save_every_weights", type=_strtobool, default="True")
+parser.add_argument("--cache_data_in_gpu", type=_strtobool, default="False")
+parser.add_argument("--overtraining_detector", type=_strtobool, default="False")
+parser.add_argument("--overtraining_threshold", type=int, default=25)
+parser.add_argument("--cleanup", type=_strtobool, default="False")
+parser.add_argument("--vocoder", type=str, default="HiFi-GAN")
+parser.add_argument("--checkpointing", type=_strtobool, default="False")
+parser.add_argument("--send_model", type=_strtobool, default="False")
+parser.add_argument("--sender_ipaddr", type=str, default="")
+parser.add_argument("--sender_keep_n_models", type=int, default=2)
+parser.add_argument("--secret_code", type=str, default="")
+parser.add_argument("--stream_data", type=_strtobool, default="False")
+parser.add_argument("--data_server_url", type=str, default="")
 
-# for i, arg in enumerate(sys.argv):
-#     print(f"argv[{i}] = {arg}")
+args = parser.parse_args()
 
-# print(f"\n======================")
-
-# Parse command line arguments
-model_name = sys.argv[1]
-save_every_epoch = int(sys.argv[2])
-total_epoch = int(sys.argv[3])
-pretrainG = sys.argv[4]
-pretrainD = sys.argv[5]
-gpus = sys.argv[6]
-batch_size = int(sys.argv[7])
-sample_rate = int(sys.argv[8])
-
-save_only_latest = _strtobool(sys.argv[9])
-save_every_weights = _strtobool(sys.argv[10])
-cache_data_in_gpu = _strtobool(sys.argv[11])
-
-overtraining_detector = _strtobool(sys.argv[12])
-overtraining_threshold = int(sys.argv[13])
-
-cleanup = _strtobool(sys.argv[14])
-vocoder = sys.argv[15]
-checkpointing = _strtobool(sys.argv[16])
-
-# remote model saver (optional)
-send_model = _strtobool(sys.argv[17]) if len(sys.argv) > 17 else False
-sender_ipaddr = sys.argv[18] if len(sys.argv) > 18 else ""
-sender_keep_n_models = int(sys.argv[19]) if len(sys.argv) > 19 else 2
-secret_code = sys.argv[20] if len(sys.argv) > 20 else ""
-
-# streaming data server (optional)
-stream_data = _strtobool(sys.argv[21]) if len(sys.argv) > 21 else False
-data_server_url = sys.argv[22] if len(sys.argv) > 22 else ""
+model_name = args.model_name
+save_every_epoch = args.save_every_epoch
+total_epoch = args.total_epoch
+pretrainG = args.pretrainG
+pretrainD = args.pretrainD
+gpus = args.gpus
+batch_size = args.batch_size
+sample_rate = args.sample_rate
+save_only_latest = args.save_only_latest
+save_every_weights = args.save_every_weights
+cache_data_in_gpu = args.cache_data_in_gpu
+overtraining_detector = args.overtraining_detector
+overtraining_threshold = args.overtraining_threshold
+cleanup = args.cleanup
+vocoder = args.vocoder
+checkpointing = args.checkpointing
+send_model = args.send_model
+sender_ipaddr = args.sender_ipaddr
+sender_keep_n_models = args.sender_keep_n_models
+secret_code = args.secret_code
+stream_data = args.stream_data
+data_server_url = args.data_server_url
 
 
 
@@ -162,12 +175,18 @@ except FileNotFoundError:
     sys.exit(1)
 
 config.data.training_files = os.path.join(experiment_dir, "filelist.txt")
+config.data.sample_rate = sample_rate
 
 torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = True
 
 global_step = 0
 last_loss_gen_all = 0
+overtrain_save_epoch = 0
+loss_gen_history = []
+smoothed_loss_gen_history = []
+loss_disc_history = []
+smoothed_loss_disc_history = []
 lowest_value = {"step": 0, "value": float("inf"), "epoch": 0}
 training_file_path = os.path.join(experiment_dir, "training_data.json")
 
@@ -248,6 +267,28 @@ def main():
         n_gpus = 1
         print("[KAGGLE_DEBUG] CPU only", flush=True)
 
+    def load_from_json(file_path):
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return (
+                    data.get("loss_disc_history", []),
+                    data.get("smoothed_loss_disc_history", []),
+                    data.get("loss_gen_history", []),
+                    data.get("smoothed_loss_gen_history", []),
+                )
+        return [], [], [], []
+
+    def continue_overtrain_detector(training_file_path):
+        if overtraining_detector:
+            if os.path.exists(training_file_path):
+                (
+                    loss_disc_history,
+                    smoothed_loss_disc_history,
+                    loss_gen_history,
+                    smoothed_loss_gen_history,
+                ) = load_from_json(training_file_path)
+
     def start():
         """
         Starts the training process with multi-GPU support or CPU.
@@ -315,6 +356,7 @@ def main():
 
         print("Cleanup done!")
 
+    continue_overtrain_detector(training_file_path)
     start()
 
 def prune_old_checkpoints(experiment_dir, keep_n):
@@ -597,10 +639,17 @@ def run(
                     "model"
                 ]
                 pretrained_emb = ckpt.get("emb_g.weight")
-                if pretrained_emb is not None and pretrained_emb.shape[0] < net_g.emb_g.num_embeddings:
-                    new_emb = net_g.emb_g.weight.data
-                    new_emb[:pretrained_emb.shape[0]] = pretrained_emb
-                    ckpt["emb_g.weight"] = new_emb
+                if pretrained_emb is not None:
+                    n_pretrained = pretrained_emb.shape[0]
+                    n_model = net_g.emb_g.num_embeddings
+                    if n_pretrained < n_model:
+                        new_emb = net_g.emb_g.weight.data
+                        new_emb[:n_pretrained] = pretrained_emb
+                        ckpt["emb_g.weight"] = new_emb
+                    elif n_pretrained > n_model:
+                        device = net_g.emb_g.weight.device
+                        gin_channels = net_g.emb_g.embedding_dim
+                        net_g.emb_g = torch.nn.Embedding(n_pretrained, gin_channels).to(device)
                 if hasattr(net_g, "module"):
                     net_g.module.load_state_dict(ckpt)
                 else:
@@ -745,10 +794,12 @@ def train_and_evaluate(
         cache (list): List to cache data in GPU memory.
         use_cpu (bool): Whether to use CPU for training.
     """
-    global global_step, lowest_value, loss_disc
+    global global_step, lowest_value, loss_disc, consecutive_increases_gen, consecutive_increases_disc, smoothed_value_gen, smoothed_value_disc
 
     if epoch == 1:
         lowest_value = {"step": 0, "value": float("inf"), "epoch": 0}
+        consecutive_increases_gen = 0
+        consecutive_increases_disc = 0
 
     net_g, net_d = nets
     optim_g, optim_d = optims
@@ -1023,14 +1074,95 @@ def train_and_evaluate(
     done = False
 
     if rank == 0:
+        overtrain_info = ""
+        # Check overtraining
+        if overtraining_detector and rank == 0 and epoch > 1:
+            # Add the current loss to the history
+            current_loss_disc = float(loss_disc)
+            loss_disc_history.append(current_loss_disc)
+            # Update smoothed loss history with loss_disc
+            smoothed_value_disc = update_exponential_moving_average(
+                smoothed_loss_disc_history, current_loss_disc
+            )
+            # Check overtraining with smoothed loss_disc
+            is_overtraining_disc = check_overtraining(
+                smoothed_loss_disc_history, overtraining_threshold * 2
+            )
+            if is_overtraining_disc:
+                consecutive_increases_disc += 1
+            else:
+                consecutive_increases_disc = 0
+            # Add the current loss_gen to the history
+            current_loss_gen = float(lowest_value["value"])
+            loss_gen_history.append(current_loss_gen)
+            # Update the smoothed loss_gen history
+            smoothed_value_gen = update_exponential_moving_average(
+                smoothed_loss_gen_history, current_loss_gen
+            )
+            # Check for overtraining with the smoothed loss_gen
+            is_overtraining_gen = check_overtraining(
+                smoothed_loss_gen_history, overtraining_threshold, 0.01
+            )
+            if is_overtraining_gen:
+                consecutive_increases_gen += 1
+            else:
+                consecutive_increases_gen = 0
+            overtrain_info = f"Smoothed loss_g {smoothed_value_gen:.3f} and loss_d {smoothed_value_disc:.3f}"
+            # Save the data in the JSON file if the epoch is divisible by save_every_epoch
+            if epoch % save_every_epoch == 0:
+                save_to_json(
+                    training_file_path,
+                    loss_disc_history,
+                    smoothed_loss_disc_history,
+                    loss_gen_history,
+                    smoothed_loss_gen_history,
+                )
+
+            if (
+                is_overtraining_gen
+                and consecutive_increases_gen == overtraining_threshold
+                or is_overtraining_disc
+                and consecutive_increases_disc == overtraining_threshold * 2
+            ):
+                print(
+                    f"Overtraining detected at epoch {epoch} with smoothed loss_g {smoothed_value_gen:.3f} and loss_d {smoothed_value_disc:.3f}"
+                )
+                done = True
+            else:
+                print(
+                    f"New best epoch {epoch} with smoothed loss_g {smoothed_value_gen:.3f} and loss_d {smoothed_value_disc:.3f}"
+                )
+                old_model_files = glob.glob(
+                    os.path.join(experiment_dir, f"{model_name}_*e_*s_best_epoch.pth")
+                )
+                for file in old_model_files:
+                    model_del.append(file)
+                model_add.append(
+                    os.path.join(
+                        experiment_dir,
+                        f"{model_name}_{epoch}e_{global_step}s_best_epoch.pth",
+                    )
+                )
+
         # Print training progress
-        lowest_value_rounded = round(lowest_value["value"], 3)
+        lowest_value_rounded = float(lowest_value["value"])
+        lowest_value_rounded = round(lowest_value_rounded, 3)
 
         record = f"{model_name} | epoch={epoch} | step={global_step} | {epoch_recorder.record()}"
         if epoch > 1:
             record = (
                 record
                 + f" | lowest_value={lowest_value_rounded} (epoch {lowest_value['epoch']} and step {lowest_value['step']})"
+            )
+
+        if overtraining_detector:
+            remaining_epochs_gen = overtraining_threshold - consecutive_increases_gen
+            remaining_epochs_disc = (
+                overtraining_threshold * 2 - consecutive_increases_disc
+            )
+            record = (
+                record
+                + f" | Number of epochs remaining for overtraining: g/total: {remaining_epochs_gen} d/total: {remaining_epochs_disc} | smoothed_loss_gen={smoothed_value_gen:.3f} | smoothed_loss_disc={smoothed_value_disc:.3f}"
             )
         print(record)
 
@@ -1099,6 +1231,7 @@ def train_and_evaluate(
                         epoch=epoch,
                         step=global_step,
                         hps=hps,
+                        overtrain_info=overtrain_info,
                         vocoder=vocoder,
                     )
 
@@ -1132,6 +1265,47 @@ def train_and_evaluate(
 
         with torch.no_grad():
             torch.cuda.empty_cache()
+
+
+def check_overtraining(smoothed_loss_history, threshold, epsilon=0.004):
+    if len(smoothed_loss_history) < threshold + 1:
+        return False
+    for i in range(-threshold, -1):
+        if smoothed_loss_history[i + 1] > smoothed_loss_history[i]:
+            return True
+        if abs(smoothed_loss_history[i + 1] - smoothed_loss_history[i]) >= epsilon:
+            return False
+    return True
+
+
+def update_exponential_moving_average(
+    smoothed_loss_history, new_value, smoothing=0.987
+):
+    if smoothed_loss_history:
+        smoothed_value = (
+            smoothing * smoothed_loss_history[-1] + (1 - smoothing) * new_value
+        )
+    else:
+        smoothed_value = new_value
+    smoothed_loss_history.append(smoothed_value)
+    return smoothed_value
+
+
+def save_to_json(
+    file_path,
+    loss_disc_history,
+    smoothed_loss_disc_history,
+    loss_gen_history,
+    smoothed_loss_gen_history,
+):
+    data = {
+        "loss_disc_history": loss_disc_history,
+        "smoothed_loss_disc_history": smoothed_loss_disc_history,
+        "loss_gen_history": loss_gen_history,
+        "smoothed_loss_gen_history": smoothed_loss_gen_history,
+    }
+    with open(file_path, "w") as f:
+        json.dump(data, f)
 
 
 if __name__ == "__main__":
